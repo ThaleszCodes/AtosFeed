@@ -1,0 +1,50 @@
+import {beforeAll,afterAll,it,expect} from 'vitest';
+import {database,rpc,asRole,USER_A,USER_B,USER_C} from './support/database.mjs';
+import {sha256} from '../lib/server/security';
+import type {PGlite} from '@electric-sql/pglite';
+let db:PGlite, orgA:string,orgB:string;
+const code=(s:string)=>s.repeat(32).toUpperCase();const hash=(s:string)=>sha256(code(s));const token=(s:string)=>'af_device_'+s.repeat(43);const tokenHash=(s:string)=>sha256(token(s));const extension='a'.repeat(32);
+beforeAll(async()=>{db=await database();orgA=(await rpc(db,'atosfeed_create_organization',{p_name:'Org A'},USER_A)).id;orgB=(await rpc(db,'atosfeed_create_organization',{p_name:'Org B'},USER_B)).id;},20000);
+afterAll(async()=>{await db?.close();});
+it('lists only organizations belonging to authenticated user',async()=>{expect((await rpc(db,'atosfeed_list_organizations',{},USER_A)).map((o:{id:string})=>o.id)).toEqual([orgA]);await expect(rpc(db,'atosfeed_create_organization',{p_name:'Anon'},null)).rejects.toThrow();});
+it('cross-organization reads/mutations fail in database, not just UI',async()=>{await expect(rpc(db,'atosfeed_list_devices',{p_org:orgB},USER_A)).rejects.toThrow();await expect(rpc(db,'atosfeed_set_member',{p_org:orgB,p_user:USER_A,p_role:'owner'},USER_A)).rejects.toThrow();expect((await asRole(db,USER_A,tx=>tx.query('select * from atosfeed.organizations where id=$1',[orgB]))).rows).toHaveLength(0);});
+it('viewer cannot write groups or create pairing',async()=>{await rpc(db,'atosfeed_set_member',{p_org:orgA,p_user:USER_C,p_role:'viewer'},USER_A);await expect(asRole(db,USER_C,tx=>tx.query('insert into atosfeed.groups values($1,$2,$3,now())',[orgA,'42','Group']))).rejects.toThrow();await expect(rpc(db,'atosfeed_create_pairing',{p_org:orgA,p_code_hash:hash('a')},USER_C)).rejects.toThrow();});
+it('preserves the final owner',async()=>{await expect(rpc(db,'atosfeed_set_member',{p_org:orgA,p_user:USER_A,p_role:'viewer'},USER_A)).rejects.toThrow('last_owner');});
+it('keeps credential hashes inaccessible even to organization owners',async()=>{await expect(asRole(db,USER_A,tx=>tx.query('select token_hash from atosfeed.devices'))).rejects.toThrow();await expect(asRole(db,USER_A,tx=>tx.query('select code_hash from atosfeed.pairing_codes'))).rejects.toThrow();});
+it('pairing is single-use and heartbeat is bound to extension identity',async()=>{
+ await rpc(db,'atosfeed_create_pairing',{p_org:orgA,p_code_hash:hash('b')},USER_A);
+ const device=await rpc(db,'atosfeed_redeem_pairing',{p_code:code('b'),p_token_hash:tokenHash('c'),p_extension_id:extension,p_name:'My Chrome'});
+ expect(device.organizationId).toBe(orgA);
+ await expect(rpc(db,'atosfeed_redeem_pairing',{p_code:code('b'),p_token_hash:tokenHash('d'),p_extension_id:extension,p_name:'Again'})).rejects.toThrow('pairing_invalid');
+ await expect(rpc(db,'atosfeed_heartbeat',{p_token:token('c'),p_extension_id:'b'.repeat(32)})).rejects.toThrow('device_invalid');
+ expect((await rpc(db,'atosfeed_heartbeat',{p_token:token('c'),p_extension_id:extension})).deviceId).toBe(device.deviceId);
+ await expect(rpc(db,'atosfeed_heartbeat',{p_token:tokenHash('c'),p_extension_id:extension})).rejects.toThrow('device_invalid');
+ const devices=await rpc(db,'atosfeed_list_devices',{p_org:orgA},USER_A);expect(devices[0].connected).toBe(true);expect(JSON.stringify(devices)).not.toContain('token_hash');
+ await expect(rpc(db,'atosfeed_revoke_device',{p_org:orgB,p_device:device.deviceId},USER_B)).rejects.toThrow();
+ await rpc(db,'atosfeed_revoke_device',{p_org:orgA,p_device:device.deviceId},USER_A);
+ await expect(rpc(db,'atosfeed_heartbeat',{p_token:token('c'),p_extension_id:extension})).rejects.toThrow('device_invalid');
+});
+it('rejects expired codes and superseded codes',async()=>{
+ await rpc(db,'atosfeed_create_pairing',{p_org:orgB,p_code_hash:hash('d')},USER_B);await db.query("update atosfeed.pairing_codes set expires_at=now()-interval '1 second' where code_hash=$1",[hash('d')]);
+ await expect(rpc(db,'atosfeed_redeem_pairing',{p_code:code('d'),p_token_hash:tokenHash('e'),p_extension_id:extension,p_name:'Expired'})).rejects.toThrow('pairing_invalid');
+ await rpc(db,'atosfeed_create_pairing',{p_org:orgB,p_code_hash:hash('e')},USER_B);await rpc(db,'atosfeed_create_pairing',{p_org:orgB,p_code_hash:hash('f')},USER_B);
+ await expect(rpc(db,'atosfeed_redeem_pairing',{p_code:code('e'),p_token_hash:tokenHash('a'),p_extension_id:extension,p_name:'Old'})).rejects.toThrow('pairing_invalid');
+});
+it('downgrading an editor revokes devices and pending codes',async()=>{
+ await rpc(db,'atosfeed_set_member',{p_org:orgB,p_user:USER_C,p_role:'editor'},USER_B);await rpc(db,'atosfeed_create_pairing',{p_org:orgB,p_code_hash:hash('1')},USER_C);
+ const device=await rpc(db,'atosfeed_redeem_pairing',{p_code:code('1'),p_token_hash:tokenHash('9'),p_extension_id:extension,p_name:'Editor'});
+ await rpc(db,'atosfeed_create_pairing',{p_org:orgB,p_code_hash:hash('2')},USER_C);await rpc(db,'atosfeed_set_member',{p_org:orgB,p_user:USER_C,p_role:'viewer'},USER_B);
+ await expect(rpc(db,'atosfeed_heartbeat',{p_token:token('9'),p_extension_id:extension})).rejects.toThrow('device_invalid');
+ await expect(rpc(db,'atosfeed_redeem_pairing',{p_code:code('2'),p_token_hash:tokenHash('f'),p_extension_id:extension,p_name:'Viewer'})).rejects.toThrow('pairing_invalid');
+ expect((await rpc(db,'atosfeed_list_devices',{p_org:orgB},USER_B)).find((d:{id:string})=>d.id===device.deviceId).revokedAt).toBeTruthy();
+});
+it('goes offline after heartbeat expires',async()=>{await db.query("update atosfeed.devices set revoked_at=null,last_seen_at=now()-interval '2 minutes' where token_hash=$1",[tokenHash('c')]);expect((await rpc(db,'atosfeed_list_devices',{p_org:orgA},USER_A))[0].connected).toBe(false);});
+it('RLS enforces group writes and foreign-key tenant isolation for jobs',async()=>{
+ await asRole(db,USER_A,tx=>tx.query('insert into atosfeed.groups(organization_id,facebook_group_id,name) values($1,$2,$3)',[orgA,'42','Authorized Group']));
+ expect((await asRole(db,USER_B,tx=>tx.query('select * from atosfeed.groups where organization_id=$1',[orgA]))).rows).toHaveLength(0);
+ expect((await asRole(db,USER_B,tx=>tx.query('update atosfeed.groups set name=$1 where organization_id=$2 returning *',['Unauthorized',orgA]))).rows).toHaveLength(0);
+ await expect(asRole(db,USER_A,tx=>tx.query('delete from atosfeed.groups where organization_id=$1',[orgA]))).rejects.toThrow();
+ await expect(asRole(db,USER_C,tx=>tx.query("insert into atosfeed.members values($1,$2,'owner')",[orgA,USER_C]))).rejects.toThrow();
+ await rpc(db,'atosfeed_set_member',{p_org:orgB,p_user:USER_A,p_role:'editor'},USER_B);
+ await expect(asRole(db,USER_A,tx=>tx.query("insert into atosfeed.jobs(organization_id,group_id,body,due_at,idempotency_key) values($1,'42','text',now(),gen_random_uuid())",[orgB]))).rejects.toThrow('foreign key');
+});

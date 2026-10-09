@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "AtosFeed · Laboratório",
+  "version": "0.2.0",
+  "description": "Teste autorizado em um único grupo. Não acessa cookies.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "alarms"
+  ],
+  "action": {
+    "default_title": "Abrir laboratório AtosFeed"
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "minimum_chrome_version": "120",
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://localhost/*",
+    "http://127.0.0.1/*"
+  ],
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}

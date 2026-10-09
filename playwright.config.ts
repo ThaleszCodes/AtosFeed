@@ -1,0 +1,2 @@
+import {defineConfig} from '@playwright/test';
+export default defineConfig({testDir:'./tests/e2e',webServer:{command:'node scripts/run-e2e.mjs',url:'http://localhost:3100',reuseExistingServer:false,timeout:120000},use:{baseURL:'http://localhost:3100',launchOptions:{executablePath:process.env.CHROMIUM_PATH || '/usr/bin/chromium',args:['--no-sandbox']}},projects:[{name:'desktop',use:{viewport:{width:1440,height:900}}},{name:'android',use:{viewport:{width:393,height:852}}}]});
