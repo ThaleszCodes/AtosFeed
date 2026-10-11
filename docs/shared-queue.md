@@ -9,7 +9,7 @@
 
 ## Fluxo disponível no código
 
-- No computador, abra o Facebook e clique no ícone AtosFeed. A permissão `activeTab` autoriza somente a aba invocada. Use **Identificar sessão e ler grupos** e **Importar grupos para o painel**. Até 50 grupos numéricos observados por importação; não é descoberta completa nem comprovação de permissão para publicar. Links com apelidos não são convertidos em IDs: abra o endereço numérico do grupo para importá-lo. Não coletamos cookies, senhas ou tokens Facebook.
+- No computador, abra o Facebook e clique no ícone AtosFeed: identifica automaticamente os grupos já carregados na página. Clique em **Sincronizar meus grupos**, conceda leitura opcional de `https://www.facebook.com/*` e a extensão abre uma aba separada em `/groups/joins/`, percorre a lista e importa automaticamente ao painel pareado. A aba original não é navegada e a permissão recém-concedida é removida ao encerrar. Grupos numéricos ou com apelidos são aceitos como endereços observados; não afirmamos converter apelidos em IDs numéricos. Limites: 30 rodadas de leitura e 500 grupos, importados em lotes de até 50. Fim da lista carregada não comprova que o Facebook mostrou todos os grupos; limites geram aviso de leitura parcial. Pode interromper; desafio/restrição/sessão expirada interrompe sem importar os resultados daquela leitura. Importação não comprova permissão para publicar. Não coletamos cookies, senhas ou tokens Facebook.
 - No painel (inclusive Android), atualize os grupos, selecione um, escreva até 4.000 caracteres e salve para revisão. Horário em branco disponibiliza agora; uma data futura só disponibiliza a tarefa a partir daquele momento. Texto e horário são persistidos na organização, não apenas no navegador. Rascunhos permanecem locais e separados por usuário/organização.
 - Na extensão, **Carregar fila disponível**, selecione e **Usar publicação selecionada**. Abra o grupo na aba original, selecione imagem opcional de até 5 MB e prepare. A imagem é anexada localmente no computador, não enviada à biblioteca Supabase nesta entrega. O painel comunica essa limitação.
 - Confira texto, imagem e grupo no Facebook e marque a autorização. O servidor reserva a tarefa antes do clique em Publicar. Falta de confirmação da reserva impede o clique. O adapter interrompe por sessão expirada, desafio ou restrição; não contorna verificações.
@@ -17,7 +17,7 @@
 
 ## Segurança, fila e conectividade
 
-A migration `202610110003_shared_queue.sql` é aditiva, restrita ao namespace AtosFeed e RPCs com prefixo próprio. Aplique **depois** das duas anteriores, somente após inspecionar o projeto autorizado. Nenhuma migration foi aplicada remotamente neste desenvolvimento.
+A migration `202610110003_shared_queue.sql` é aditiva, restrita ao namespace AtosFeed e RPCs com prefixo próprio. Aplique **depois** das duas anteriores; depois aplique a migration 004, que aceita endereços com apelidos e exclui rotas de navegação. A 004 substitui apenas a função própria de importação e preserva dados., somente após inspecionar o projeto autorizado. Nenhuma migration foi aplicada remotamente neste desenvolvimento.
 
 Usuários autenticados consultam apenas a organização da qual são membros. Owner/editor criam/cancelam; viewer consulta. Dispositivo autenticado pelo token original e ID da extensão só importa grupos, consulta tarefas vencidas, reserva e reporta na organização do pareamento. Revogação/expiração/rebaixamento são verificados a cada RPC. O hash armazenado não é credencial. As funções internas não têm EXECUTE público.
 
@@ -32,3 +32,11 @@ Testes SQL usam PostgreSQL PGlite real, mas auth/PostgREST e APIs Chrome são si
 O endpoint do projeto Supabase responde HTTP 401 (rede disponível); não há URL/chave pública injetadas nem credencial administrativa para inspecionar/aplicar migrations. Não houve validação Supabase real. O Chrome deste ambiente bloqueia carregar extensões por política administrativa; não tentamos contornar. Runtime MV3, Facebook real, SMTP e Android físico ainda exigem piloto.
 
 Próximo passo: configurar as duas variáveis públicas nas configurações seguras do ambiente, obter acesso autorizado de inspeção do banco e validar migrations/piloto no Chrome do usuário. Nunca envie segredos de administração ou sessão Facebook no chat. Publicação real continua exigindo autorização explícita do conteúdo e do grupo.
+
+## Descoberta automática — extensão 0.4
+
+A referência funcional solicitada foi a descoberta automática de grupos da Gruply. O site tentado `https://gruply.com.br` não estava acessível neste ambiente; não inspecionamos nem copiamos seu código/fluxo interno. Implementação própria por DOM visível, sem endpoints privados ou extração de credenciais. Documentação oficial Chrome de activeTab e permissions consultada com HTTP 200.
+
+O scanner acumula resultados entre telas virtualizadas, ignora navegação/sidebar/links externos/malformados, usa labels acessíveis e verifica sessão/guard a cada rodada. Três observações estáveis no fim carregado, sem indicador de loading, encerram a leitura. Sessão ainda não renderizada recebe espera inicial limitada. Uma lock impede duas leituras simultâneas no mesmo navegador. Não há navegação em massa pelos grupos ou envio durante a sincronização.
+
+Mudanças de URL por redirecionamento de apelido para ID podem fazer o adapter de publicação interromper por destino diferente; isso precisa de piloto real, sem tentar adivinhar a identidade. Listagem carregada parcialmente pelo Facebook, mudanças de seletores e intervalos superiores à espera limitada permanecem limitações. Nenhum teste local demonstra descoberta completa ou integração real.

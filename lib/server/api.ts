@@ -19,7 +19,7 @@ export async function handle(request:Request,operation:Operation){
    const token=bearer(request);if(!/^af_device_[A-Za-z0-9_-]{43}$/.test(token))throw new ApiError(401,'wrong_credential','Credencial de dispositivo inválida.');
    if(operation==='sync-groups'){
     const input=await body(request,65536);if(!Array.isArray(input.groups)||input.groups.length>50)throw new ApiError(400,'invalid_groups','Importe até 50 grupos visíveis por vez.');
-    const groups=input.groups.map(g=>{if(!g||typeof g!=='object'||!/^\d{1,30}$/.test(g.id))throw new ApiError(400,'invalid_groups','Grupo inválido. Leia os grupos novamente.');return {id:g.id,name:text(g.name,1,120)};});
+    const groups=input.groups.map(g=>{if(!g||typeof g!=='object'||typeof g.id!=='string'||!/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/.test(g.id)||['feed','discover','joins','create','notifications','pending','suggested'].includes(g.id.toLowerCase()))throw new ApiError(400,'invalid_groups','Grupo inválido. Leia os grupos novamente.');return {id:g.id,name:text(g.name,1,120)};});
     return Response.json(await db.rpc('atosfeed_sync_groups',{p_token:token,p_extension_id:ext,p_groups:groups}),{headers});
    }
    if(operation==='device-jobs')return Response.json({jobs:await db.rpc('atosfeed_device_jobs',{p_token:token,p_extension_id:ext})},{headers});
@@ -42,7 +42,7 @@ export async function handle(request:Request,operation:Operation){
    if(request.method==='GET')return Response.json({jobs:await db.rpc('atosfeed_list_jobs',{p_org:uuid(url.searchParams.get('organizationId'))})},{headers});
    if(request.method==='POST'){
     const input=await body(request,65536);const due=typeof input.dueAt==='string'?new Date(input.dueAt):new Date(NaN);if(!Number.isFinite(due.getTime()))throw new ApiError(400,'invalid_date','Informe uma data válida.');
-    return Response.json({job:await db.rpc('atosfeed_create_job',{p_org:uuid(input.organizationId),p_group:text(input.groupId,1,30),p_body:text(input.text,1,4000),p_due:due.toISOString(),p_key:uuid(input.idempotencyKey)})},{status:201,headers});
+    return Response.json({job:await db.rpc('atosfeed_create_job',{p_org:uuid(input.organizationId),p_group:text(input.groupId,1,100),p_body:text(input.text,1,4000),p_due:due.toISOString(),p_key:uuid(input.idempotencyKey)})},{status:201,headers});
    }
    if(request.method==='DELETE'){const input=await body(request);await db.rpc('atosfeed_cancel_job',{p_org:uuid(input.organizationId),p_job:uuid(input.jobId)});return Response.json({cancelled:true},{headers});}
   }

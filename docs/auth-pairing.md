@@ -25,11 +25,12 @@ Project ref solicitado: `mpxbbembbzxtwekwwrvw`. Acesso e chave pública ainda n�
 Depois de validar o acesso autorizado:
 
 1. Inspecionar schema, funções/policies/grants e configuração auth existente; preservar dados e não sobrescrever objetos existentes.
-2. Testar em staging/local as três migrations, nessa ordem:
+2. Testar em staging/local as quatro migrations, nessa ordem:
    - `202610080001_atosfeed.sql`
    - `202610080002_auth_pairing.sql`
    - `202610110003_shared_queue.sql`
-3. Aplicar apenas após revisão de compatibilidade. As três são aditivas/transacionais e usam schema `atosfeed`; não removem ou migram tabelas do sistema antigo. Colisões de objetos abortam, não fazem drop/recreate.
+   - `202610110004_group_addresses.sql`
+3. Aplicar apenas após revisão de compatibilidade. As quatro são aditivas/transacionais e usam schema `atosfeed`; não removem ou migram tabelas do sistema antigo. Colisões de objetos abortam, não fazem drop/recreate.
 4. Os RPCs `public.atosfeed_*` ficam no schema public já exposto pelo Supabase; tabelas e credenciais continuam no schema privado AtosFeed. Não é necessário expor esse schema pela API. Verificar grants/default privileges do projeto real.
 5. Configurar o Site URL do AtosFeed e redirects exatos do painel: raiz `/` para confirmação de cadastro e `/auth/reset` para recuperação. Evitar curingas de produção. Preservar redirects legítimos já existentes.
 6. Verificar e-mail/SMTP, confirmação de cadastro e políticas de senha existentes. O código não altera esses requisitos. Cadastro com confirmação obrigatória não dá acesso antes da confirmação. Recuperação usa PKCE e precisa ser aberta no navegador que iniciou o pedido; link/verifier expirados exigem novo pedido.
@@ -52,7 +53,7 @@ Depois de validar o acesso autorizado:
 2. Como owner/editor, clique **Gerar código de pareamento**. Código aleatório de 128 bits, validade de cinco minutos, uso único, mantido apenas em memória no painel. Novo código invalida o anterior do mesmo usuário/organização.
 3. Instale/atualize `extension/` no Chrome 120+. Abra as opções da extensão (clicar no ícone fora do Facebook também abre opções).
 4. Informe a origem do próprio painel (HTTPS ou localhost), nome do computador e código.
-5. A extensão pede permissão opcional somente ao hostname escolhido. Não instala acesso permanente ao Facebook; mantém `activeTab` para operações iniciadas pelo usuário. Permissões de host não distinguem portas em localhost, mas a credencial fica vinculada à origem exata configurada.
+5. A extensão pede permissão opcional somente ao hostname escolhido. Mantém `activeTab` para operações iniciadas pelo usuário. A descoberta da lista pede acesso opcional ao Facebook no gesto de sincronizar, revogado ao encerrar a leitura quando concedido por ela. Permissões de host não distinguem portas em localhost, mas a credencial fica vinculada à origem exata configurada.
 6. A API resgata o código numa transação e emite credencial aleatória de dispositivo (256 bits, trinta dias), vinculada à organização, ao usuário que pareou e ao ID da extensão. Banco guarda somente hashes SHA-256, inacessíveis às roles anon/authenticated. API devolve o token apenas nessa resposta.
 7. Extensão guarda essa credencial de AtosFeed em storage restrito a contextos confiáveis. Nunca recebe JWT de usuário Supabase nem tokens/cookies Facebook.
 8. Alarmes enviam heartbeat a cada 30 segundos, inclusive após restart do Chrome. **Estar conectado ao painel não comprova sessão ativa no Facebook.** Após 90 segundos sem contato, o servidor considera offline. Painel consulta a cada 15 segundos e revalida ao voltar à aba/reconectar.

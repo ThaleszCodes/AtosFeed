@@ -11,7 +11,7 @@ Next.js 16.4, React 19, TypeScript e Tailwind 4. Dependências reproduzíveis pe
 ## Componentes atuais
 
 - `app/`: login/cadastro/reset, APIs de organizações/pareamento/dispositivos e editor com autosave/fila locais. Não envia ao Facebook. Imagens são escolhidas diretamente no laboratório da extensão para evitar expô-las em um bridge não autenticado.
-- `extension/`: MV3 com `activeTab`, `scripting`, `storage`, `alarms`. Host opcional somente do painel escolhido; sem cookies, debugger, webRequest ou execução de publicações em background. Um clique na ação abre o laboratório em uma aba da extensão e mantém o alvo original. Injeções no mundo isolado e somente no Facebook. Navegação para outra origem revoga activeTab.
+- `extension/`: MV3 com `activeTab`, `scripting`, `storage`, `alarms`. Host opcional do painel escolhido e, durante sincronização iniciada pelo usuário, do Facebook; sem cookies, debugger, webRequest ou execução de publicações em background. Um clique na ação abre o laboratório em uma aba da extensão e mantém o alvo original. Injeções no mundo isolado e somente no Facebook. Navegação para outra origem revoga activeTab.
 - `lib/queue.ts`: estados, validação de datas, organização obrigatória, claim condicionado a conexão e horário, recuperação conservadora. Não é um worker distribuído.
 - `lib/supabase.ts`: cliente público opcional com PKCE; APIs verificam sessão com getUser. Sem service-role. Sem configuração real, não faz pedidos ao projeto.
 - `supabase/migrations/`: proposta transacional própria no schema `atosfeed`, com RLS e roles owner/editor/viewer. Foreign key composta impede job referenciar um grupo de outra organização. Membros e organizações somente provisionáveis por operação confiável. Jobs não podem receber estados de sucesso do cliente. Não aplicar antes de inspeção do projeto real; não habilitamos schema na API nem alteramos tabelas existentes.
@@ -53,4 +53,4 @@ Chromium gerenciado recusa carregar extensões unpacked por política administra
 
 ## Evolução 3.4–3.6 / 4.2
 
-Ver [auth-pairing.md](auth-pairing.md) para a arquitetura atual de conta, organizações, permissões, RPCs e heartbeat. A extensão agora também pede alarms e permissão opcional ao hostname escolhido pelo usuário; nunca acesso permanente ao Facebook. A documentação oficial externa citada nesta etapa respondeu HTTP 200; em 11/10 o endpoint Supabase responde 401 e as credenciais ainda estão ausentes. Dados remotos continuam intactos.
+Ver [auth-pairing.md](auth-pairing.md) para a arquitetura atual de conta, organizações, permissões, RPCs e heartbeat. A extensão agora também pede alarms e permissão opcional ao hostname escolhido pelo usuário; a descoberta solicita acesso temporário ao Facebook, removido ao encerrar quando concedido por ela. A documentação oficial externa citada nesta etapa respondeu HTTP 200; em 11/10 o endpoint Supabase responde 401 e as credenciais ainda estão ausentes. Dados remotos continuam intactos.

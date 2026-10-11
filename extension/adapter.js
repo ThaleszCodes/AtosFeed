@@ -9,11 +9,19 @@ function guard(doc, url) {
  return null;
 }
 function readGroups(doc, url) {
- return [...new Map([...doc.querySelectorAll('a[href]')].flatMap(a => {
-  const u = new URL(a.getAttribute('href'), url); const m = u.pathname.match(/^\/groups\/([^/]+)\/?$/);
-  const name = a.textContent?.trim();
-  return u.origin === new URL(url).origin && m && !['feed','discover','joins','create'].includes(m[1]) && name ? [[m[1],{id:m[1],name,url:u.origin+'/groups/'+m[1]+'/'}]] : [];
+ const scope=doc.querySelector('[role="main"],main')||doc;
+ return [...new Map([...scope.querySelectorAll('a[href]')].flatMap(a => {
+  let u;try{u=new URL(a.getAttribute('href'),url);}catch{return [];}
+  const m=u.pathname.match(/^\/groups\/([A-Za-z0-9][A-Za-z0-9._-]{0,99})\/?$/);
+  const name=(a.textContent?.trim()||a.getAttribute('aria-label')||a.querySelector('img')?.getAttribute('alt')||'').trim().slice(0,120);
+  return u.origin===new URL(url).origin && m && !['feed','discover','joins','create','notifications','pending','suggested'].includes(m[1].toLowerCase()) && name ? [[m[1],{id:m[1],name,url:u.origin+'/groups/'+m[1]+'/'}]] : [];
  })).values()];
+}
+function observableSession(){return !!document.querySelector('[aria-label="Seu perfil"],[aria-label="Your profile"],[aria-label="Conta"],[aria-label="Account"],[aria-label="Sua conta"],[aria-label="Your account"]');}
+function scrollContainer(){
+ const main=document.querySelector('[role="main"],main');
+ if(main){for(const element of [main,...main.querySelectorAll('div')]){const style=getComputedStyle(element);if(/auto|scroll/.test(style.overflowY)&&element.scrollHeight>element.clientHeight+10)return element;}}
+ return document.scrollingElement||document.documentElement;
 }
 function outcome(text, priorText = '') {
  const patterns = [['awaiting_approval', /aguardando aprovação|pending approval|enviad[ao] para aprovação|submitted for approval/i],['sent', /publicação publicada|post published|your post has been published/i],['failed', /não foi possível publicar|couldn.t publish|failed to post/i]];
@@ -28,11 +36,17 @@ function recover(job) {return job.state === 'executing' ? {...job,state:'unknown
  const interruption = guard(document, location.href);
  if (interruption) return {state:'interrupted',reason:interruption};
  const dialogs = () => [...document.querySelectorAll('[role="dialog"]')];
+ if(action === 'discover-step') {
+  if(!/^\/groups\/joins\/?$/.test(location.pathname))return {state:'interrupted',reason:'wrong_directory'};
+  if(!observableSession())return {state:'unverified',groups:[]};
+  const container=scrollContainer();if(payload.scroll)container.scrollTop+=Math.max(container.clientHeight*0.8,300);
+  return {state:'available',groups:readGroups(document,location.href),loading:!!document.querySelector('[role="progressbar"],[aria-busy="true"]'),scroll:{top:container.scrollTop,atEnd:container.scrollTop+container.clientHeight>=container.scrollHeight-8}};
+ }
  if(action === 'inspect') {
   const account = document.querySelector('[aria-label="Seu perfil"], [aria-label="Your profile"]');
-  return {state:account?'available':'unverified',account:account?.getAttribute('aria-label') || null,groups:readGroups(document,location.href)};
+  return {state:observableSession()?'available':'unverified',account:account?.getAttribute('aria-label') || null,groups:readGroups(document,location.href)};
  }
- if(!/^\/groups\/[^/]+\/?$/.test(location.pathname) || location.pathname.split('/')[2] !== payload.groupId) return {state:'failed',reason:'wrong_group'};
+ if(['feed','discover','joins','create','notifications','pending','suggested'].includes(String(payload.groupId).toLowerCase()) || !/^\/groups\/[^/]+\/?$/.test(location.pathname) || location.pathname.split('/')[2] !== payload.groupId) return {state:'failed',reason:'wrong_group'};
  if(action === 'prepare') {
   if(dialogs().length) return {state:'failed',reason:'existing_dialog'};
   const openers=[...document.querySelectorAll('[role="button"]')].filter(e=>/^(Escreva algo|Write something|Criar publicação|Create post)/i.test(e.textContent.trim()));

@@ -33,4 +33,4 @@ Falha antes de clicar Publicar preserva campos; após clique sem evidência, tra
 
 ## Supabase e produção
 
-Fornecer acesso seguro ao projeto e configuração pública do cliente nas variáveis do ambiente (não em chat/commits). Antes de aplicar SQL: inspecionar namespaces/policies/roles existentes, confirmar compatibilidade, testar em instância local ou staging e executar testes RLS com usuários de organizações diferentes. As três migrations e RLS/RPCs foram testadas em PostgreSQL PGlite local; não no projeto Supabase. Nenhum deploy Vercel ou publicação de extensão ocorreu.
+Fornecer acesso seguro ao projeto e configuração pública do cliente nas variáveis do ambiente (não em chat/commits). Antes de aplicar SQL: inspecionar namespaces/policies/roles existentes, confirmar compatibilidade, testar em instância local ou staging e executar testes RLS com usuários de organizações diferentes. As quatro migrations e RLS/RPCs foram testadas em PostgreSQL PGlite local; não no projeto Supabase. Nenhum deploy Vercel ou publicação de extensão ocorreu.

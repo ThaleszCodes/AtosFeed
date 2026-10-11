@@ -22,7 +22,7 @@ async function disconnectUnlocked(){
 }
 async function disconnect(){return navigator.locks.request('atosfeed-connection',disconnectUnlocked);}
 chrome.action.onClicked.addListener(async tab=>{
- if(tab.id&&/^https:\/\/(www\.)?facebook\.com\//.test(tab.url||''))await chrome.tabs.create({url:chrome.runtime.getURL('runner.html')+'?tab='+tab.id});
+ if(tab.id&&/^https:\/\/(www\.)?facebook\.com\//.test(tab.url||''))await chrome.tabs.create({url:chrome.runtime.getURL('runner.html')+'?tab='+tab.id+'&autodetect=1'});
  else await chrome.runtime.openOptionsPage();
 });
 chrome.alarms.onAlarm.addListener(alarm=>{if(alarm.name===ALARM)void heartbeat();});
