@@ -1,3 +1,5 @@
+> Atualização 11/10/2026: a fila autenticada, importação de grupos, reserva e resultados estão conectados; consulte [shared-queue.md](shared-queue.md). Seções abaixo registram as decisões iniciais e sua evolução.
+
 # Arquitetura inicial
 
 ## Escopo e fontes
@@ -9,7 +11,7 @@ Next.js 16.4, React 19, TypeScript e Tailwind 4. Dependências reproduzíveis pe
 ## Componentes atuais
 
 - `app/`: login/cadastro/reset, APIs de organizações/pareamento/dispositivos e editor com autosave/fila locais. Não envia ao Facebook. Imagens são escolhidas diretamente no laboratório da extensão para evitar expô-las em um bridge não autenticado.
-- `extension/`: MV3 com `activeTab`, `scripting`, `storage`. Sem host_permissions, cookies, debugger, webRequest, acesso ao painel ou execução de publicações em background. Um clique na ação abre o laboratório em uma aba da extensão e mantém o alvo original. Injeções no mundo isolado e somente no Facebook. Navegação para outra origem revoga activeTab.
+- `extension/`: MV3 com `activeTab`, `scripting`, `storage`, `alarms`. Host opcional somente do painel escolhido; sem cookies, debugger, webRequest ou execução de publicações em background. Um clique na ação abre o laboratório em uma aba da extensão e mantém o alvo original. Injeções no mundo isolado e somente no Facebook. Navegação para outra origem revoga activeTab.
 - `lib/queue.ts`: estados, validação de datas, organização obrigatória, claim condicionado a conexão e horário, recuperação conservadora. Não é um worker distribuído.
 - `lib/supabase.ts`: cliente público opcional com PKCE; APIs verificam sessão com getUser. Sem service-role. Sem configuração real, não faz pedidos ao projeto.
 - `supabase/migrations/`: proposta transacional própria no schema `atosfeed`, com RLS e roles owner/editor/viewer. Foreign key composta impede job referenciar um grupo de outra organização. Membros e organizações somente provisionáveis por operação confiável. Jobs não podem receber estados de sucesso do cliente. Não aplicar antes de inspeção do projeto real; não habilitamos schema na API nem alteramos tabelas existentes.
@@ -26,9 +28,9 @@ A extensão grava hash SHA-256 do conteúdo, imagem e destino ANTES de enviar. L
 
 ## Agendamento e desconexão
 
-O painel salva fila somente no navegador/dispositivo; não troca dados com a extensão. Datas são capturadas no fuso do dispositivo e armazenadas em UTC. Chrome fechado/offline não executa. Não há alarmes, publicação automática nem recuperação automática de horários perdidos. A base de claim só inicia queued vencido com conexão presente. Executing interrompido vira unknown, nunca queued automaticamente.
+O laboratório `/lab` salva uma fila apenas no navegador. O painel autenticado usa a fila no servidor, integrada à extensão via RPCs limitados à organização. Datas são capturadas no fuso do dispositivo e armazenadas em UTC. Chrome fechado/offline não executa. Alarmes enviam apenas heartbeat; não há publicação automática nem recuperação automática de horários perdidos. A base de claim só inicia queued vencido com conexão presente. Executing interrompido vira unknown, nunca queued automaticamente.
 
-Autenticação Supabase e pareamento com código descartável, membership, expiração e revogação estão implementados e testados localmente (ver auth-pairing.md). Próxima implementação: worker de publicação com claim transacional e lease; identificador único por job; heartbeat; reconciliação manual de unknown. Antes de retomadas atrasadas, usuário deve confirmar a nova janela. Não confiar em organizationId recebido do browser sem validar JWT/membership no servidor.
+Autenticação Supabase e pareamento com código descartável, membership, expiração e revogação estão implementados e testados localmente (ver auth-pairing.md). Claim transacional, identificador por tentativa e reconciliação de reserva vencida para unknown estão implementados; a execução depende da revisão e autorização explícita na extensão. Automação autônoma fica para uma entrega futura após piloto. Antes de retomadas atrasadas, usuário deve confirmar a nova janela. Não confiar em organizationId recebido do browser sem validar JWT/membership no servidor.
 
 Vercel, PWA, Web Push e MCP autenticado permanecem na roadmap. Não instalamos service worker que poderia ocultar builds antigos nem simulamos push/MCP.
 
@@ -51,4 +53,4 @@ Chromium gerenciado recusa carregar extensões unpacked por política administra
 
 ## Evolução 3.4–3.6 / 4.2
 
-Ver [auth-pairing.md](auth-pairing.md) para a arquitetura atual de conta, organizações, permissões, RPCs e heartbeat. A extensão agora também pede alarms e permissão opcional ao hostname escolhido pelo usuário; nunca acesso permanente ao Facebook. A documentação oficial externa citada nesta etapa respondeu HTTP 200; o acesso ao projeto Supabase permanece bloqueado/sem chave. Dados remotos continuam intactos.
+Ver [auth-pairing.md](auth-pairing.md) para a arquitetura atual de conta, organizações, permissões, RPCs e heartbeat. A extensão agora também pede alarms e permissão opcional ao hostname escolhido pelo usuário; nunca acesso permanente ao Facebook. A documentação oficial externa citada nesta etapa respondeu HTTP 200; em 11/10 o endpoint Supabase responde 401 e as credenciais ainda estão ausentes. Dados remotos continuam intactos.

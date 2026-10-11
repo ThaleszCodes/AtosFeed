@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "AtosFeed · Laboratório",
-  "version": "0.2.0",
-  "description": "Teste autorizado em um único grupo. Não acessa cookies.",
+  "name": "AtosFeed",
+  "version": "0.3.0",
+  "description": "Importe grupos, revise sua fila e autorize uma publicação por vez. Não acessa cookies.",
   "permissions": [
     "activeTab",
     "scripting",

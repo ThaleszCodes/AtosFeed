@@ -8,7 +8,7 @@ O smoke automatizado de carregamento MV3 foi bloqueado por política administrat
 
 ## Extensão experimental (computador)
 
-Pareamento com o painel: siga [auth-pairing.md](auth-pairing.md). O fluxo abaixo é exclusivo do laboratório Facebook e não executa a fila do painel.
+Pareamento com o painel: siga [auth-pairing.md](auth-pairing.md). O fluxo abaixo pode ser local ou carregar uma tarefa compartilhada; para a fila do painel e download do ZIP, siga [shared-queue.md](shared-queue.md).
 
 1. Chrome → chrome://extensions → modo desenvolvedor → Carregar sem compactação → pasta `extension/`.
 2. Abra uma sessão própria do Facebook e a lista de grupos. Clique no ícone AtosFeed; uma aba de laboratório será aberta.
@@ -33,4 +33,4 @@ Falha antes de clicar Publicar preserva campos; após clique sem evidência, tra
 
 ## Supabase e produção
 
-Fornecer acesso seguro ao projeto e configuração pública do cliente nas variáveis do ambiente (não em chat/commits). Antes de aplicar SQL: inspecionar namespaces/policies/roles existentes, confirmar compatibilidade, testar em instância local ou staging e executar testes RLS com usuários de organizações diferentes. As duas migrations e RLS/RPCs foram testadas em PostgreSQL PGlite local; não no projeto Supabase. Nenhum deploy Vercel ou publicação de extensão ocorreu.
+Fornecer acesso seguro ao projeto e configuração pública do cliente nas variáveis do ambiente (não em chat/commits). Antes de aplicar SQL: inspecionar namespaces/policies/roles existentes, confirmar compatibilidade, testar em instância local ou staging e executar testes RLS com usuários de organizações diferentes. As três migrations e RLS/RPCs foram testadas em PostgreSQL PGlite local; não no projeto Supabase. Nenhum deploy Vercel ou publicação de extensão ocorreu.

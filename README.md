@@ -1,6 +1,6 @@
 # AtosFeed
 
-SaaS independente em desenvolvimento. Laboratório Facebook das etapas **1/4** e implementação de **3.4–3.6 / 4.2**: autenticação, organizações, permissões, pareamento e heartbeat. Integrações remotas ainda não validadas.
+SaaS independente em desenvolvimento. Laboratório Facebook das etapas **1/4** e implementação de **3.4–3.6 / 4.2**: autenticação, organizações, permissões, pareamento, importação de grupos, fila compartilhada e resultados de envios revisados na extensão. Integrações remotas ainda não validadas.
 
 ## Executar
 
@@ -24,12 +24,13 @@ npm run test:e2e
 
 E2E inicia fixture HTTP de autenticação/PostgREST, PostgreSQL PGlite real em memória e build isolado `.next-e2e` (portas 54329/3100). Usa `/usr/bin/chromium` ou `CHROMIUM_PATH`. Não é uma instância Supabase real; Facebook é inteiramente interceptado. Não publique/deploy `.next-e2e`.
 
-## Extensão 0.2
+## Extensão 0.3 — baixar e instalar
 
-Carregue `extension/` sem compactação no Chrome 120+ do seu computador. Nas opções, informe o painel e o código descartável criado em **Conexão**. A extensão pede acesso opcional somente ao domínio escolhido. O heartbeat indica computador conectado, sem comprovar sessão Facebook. A credencial não autoriza publicação nem execução automática da fila.
+No painel, abra **Instalar extensão** ou **Conexão** e clique em **Baixar extensão (.ZIP)**. Descompacte e carregue a pasta `atosfeed-extension` em `chrome://extensions` no Chrome 120+ do computador. Para desenvolvimento, também é possível carregar `extension/` diretamente. O pacote é gerado automaticamente por `npm run dev` e `npm run build`, ou com `npm run extension:package`. Nas opções, informe o painel e o código descartável criado em **Conexão**. A extensão pede acesso opcional somente ao domínio escolhido. O heartbeat indica computador conectado, sem comprovar sessão Facebook. Importe grupos visíveis, crie a tarefa no painel e carregue-a na extensão. O envio exige conferir texto/imagem/grupo e autorizar uma vez. A fila não executa automaticamente.
 
 O Chromium desta máquina bloqueia extensões por política administrativa. Código e adapter foram testados localmente, mas runtime MV3, Supabase remoto e Facebook ainda exigem piloto. Nenhuma publicação real realizada.
 
+- [Download, instalação e fila compartilhada](docs/shared-queue.md)
 - [Auth, organizações, pareamento e limites dos testes](docs/auth-pairing.md)
 - [Extensão Facebook e protocolo de validação](docs/validation.md)
 - [Arquitetura e decisões](docs/architecture.md)

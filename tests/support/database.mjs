@@ -5,7 +5,7 @@ export async function database(){
  const db=new PGlite();
  await db.exec(`create role anon; create role authenticated; create schema auth; create table auth.users(id uuid primary key); create function auth.uid() returns uuid language sql stable as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$; grant usage on schema auth to anon,authenticated; grant execute on function auth.uid() to anon,authenticated;`);
  for(const id of [USER_A,USER_B,USER_C])await db.query('insert into auth.users values($1)',[id]);
- for(const f of ['202610080001_atosfeed.sql','202610080002_auth_pairing.sql'])await db.exec(await readFile(new URL('../../supabase/migrations/'+f,import.meta.url),'utf8'));
+ for(const f of ['202610080001_atosfeed.sql','202610080002_auth_pairing.sql','202610110003_shared_queue.sql'])await db.exec(await readFile(new URL('../../supabase/migrations/'+f,import.meta.url),'utf8'));
  return db;
 }
 /** @template T @param {import('@electric-sql/pglite').PGlite} db @param {string|null} userId @param {(tx:import('@electric-sql/pglite').Transaction)=>Promise<T>} fn */

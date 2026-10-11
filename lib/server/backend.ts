@@ -9,7 +9,7 @@ function client(token?:string){
 }
 function databaseError(error:{code?:string;message?:string}):never{
  if(error.code==='42501')throw new ApiError(403,'forbidden','Seu perfil não permite esta operação nesta organização.');
- const messages:Record<string,[number,string]>={pairing_invalid:[410,'Código inválido, expirado ou já utilizado. Gere outro código no painel.'],device_invalid:[401,'Dispositivo revogado, expirado ou sem permissão. Faça um novo pareamento.'],last_owner:[409,'A organização precisa manter pelo menos um proprietário.'],device_limit:[409,'Limite de dez dispositivos atingido. Revogue um dispositivo antes de conectar outro.']};
+ const messages:Record<string,[number,string]>={job_unavailable:[409,'Tarefa cancelada, já reservada ou indisponível. Atualize a fila; não repita o envio.'],idempotency_conflict:[409,'O identificador de envio já pertence a outro conteúdo.'],pairing_invalid:[410,'Código inválido, expirado ou já utilizado. Gere outro código no painel.'],device_invalid:[401,'Dispositivo revogado, expirado ou sem permissão. Faça um novo pareamento.'],last_owner:[409,'A organização precisa manter pelo menos um proprietário.'],device_limit:[409,'Limite de dez dispositivos atingido. Revogue um dispositivo antes de conectar outro.']};
  const known=messages[error.message||''];if(known)throw new ApiError(known[0],error.message!,known[1]);
  if(error.code==='22023'||error.code==='22P02'||error.code==='23503')throw new ApiError(400,'invalid_input','Dados inválidos ou usuário não cadastrado. Confira os campos.');
  if(error.code==='PGRST202'||error.code==='42P01')throw new ApiError(503,'migration_required','A estrutura AtosFeed ainda não foi instalada neste projeto Supabase.');

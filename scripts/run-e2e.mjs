@@ -1,6 +1,8 @@
 // Test infrastructure only. No mock authentication branch exists in production code.
 import {spawn} from 'node:child_process';
 import {startFixture} from '../tests/support/supabase-fixture.mjs';
+import {packageExtension} from './package-extension.mjs';
+await packageExtension();
 const fixture=await startFixture();
 const env={...process.env,ATOSFEED_BUILD_DIR:'.next-e2e',NEXT_PUBLIC_SUPABASE_URL:'http://127.0.0.1:54329',NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:'sb_publishable_local_fixture'};
 let child,closing=false;
